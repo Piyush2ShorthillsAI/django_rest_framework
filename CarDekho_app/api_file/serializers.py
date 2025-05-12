@@ -8,9 +8,11 @@ from ..models import carlist,Showroomlist, Review
 #         raise serializers.ValidationError("Only aplhanumeric characters are allowed")
 
 class ReviewSerializers(serializers.ModelSerializer):
+    apiuser  = serializers.StringRelatedField(read_only = True)
     class Meta:
         model = Review
-        fields = '__all__' # all fields
+        exclude = ('car',) # exclude specific field
+        # fields = '__all__' # all fields
         # fields = ['id', 'rating', 'comments', 'car'] # specific fields
         # exclude = ['car'] # exclude specific field
         # read_only_fields = ['car'] # make field read only

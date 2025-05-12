@@ -3,6 +3,7 @@ from .models import carlist, Showroomlist, Review
 from django.http import JsonResponse, HttpResponse
 import json
 from .api_file.serializers import CarSerializer,ShowroomSerializer, ReviewSerializers
+from .api_file.permissions import AdminOrReadOnlyPermission, ReviewUserReadOnlypermission
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -13,6 +14,7 @@ from rest_framework.authentication import BasicAuthentication, SessionAuthentica
 from rest_framework.permissions import IsAuthenticated,AllowAny,IsAdminUser,DjangoModelPermissions
 from rest_framework import viewsets
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 # Create your views here.
 
 # def car_list_view(request):
@@ -33,22 +35,59 @@ from django.shortcuts import get_object_or_404
 #     }
 #     return JsonResponse(data)
 
-
-class ReviewList(generics.ListCreateAPIView):
-    queryset = Review.objects.all()
+class ReviewCreate(generics.CreateAPIView):
     serializer_class = ReviewSerializers
+    
+    def get_queryset(self): 
+        return Review.objects.all()
 
-# class ReviewDetail(generics.RetrieveUpdateDestroyAPIView):
+    def perform_create(self, serializer):
+        pk = self.kwargs['pk']
+        cars  = carlist.objects.get(pk = pk)
+        useredit  = self.request.user
+        Review_queryset = Review.objects.filter(car  = cars,apiuser = useredit)
+        if Review_queryset.exists():
+            raise ValidationError("You have already reviewed this car")
+        serializer.save(car=cars,apiuser=useredit)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+
+
+
+class ReviewList(generics.ListAPIView):
+    # queryset = Review.objects.all()
+    serializer_class = ReviewSerializers
+    def get_queryset(self):
+        pk = self.kwargs['pk']
+        return Review.objects.filter(car=pk)
+
+
+
+
+
+
+
+
+
+class ReviewDetail(generics.RetrieveUpdateDestroyAPIView):
 # class ReviewDetail(generics.ListAPIView):
-class ReviewDetail(generics.DestroyAPIView):
+# class ReviewDetail(generics.DestroyAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializers
+    # permission_classes = [AdminOrReadOnlyPermission]
+    permission_classes = [ReviewUserReadOnlypermission]
     # authentication_classes = [SessionAuthentication]
     # permission_classes = [DjangoModelPermissions]
+  
+  
+    """review detail view
+    list : list all review
+    update : update a review
+    destroy : delete a review
 
-
-
-
+    Returns:
+        _type_: _description_
+    """
 # class ReviewDetail(mixins.RetrieveModelMixin, generics.GenericAPIView):
 #     queryset = Review.objects.all()
 #     serializer_class = ReviewSerializers
@@ -62,6 +101,18 @@ class ReviewDetail(generics.DestroyAPIView):
     # def delete(self, request, *args, **kwargs):
     #     return self.destroy(request, *args, **kwargs)
     
+        
+    """review list view
+        list : list all review
+        
+        create : create a review
+
+        Returns:
+            Response: json response of review
+    """
+
+
+
 # class ReviewList(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
 #     queryset = Review.objects.all()
 #     serializer_class = ReviewSerializers    
@@ -73,15 +124,15 @@ class ReviewDetail(generics.DestroyAPIView):
 #     def post(self, request, *args, **kwargs):
 #         return self.create(request, *args, **kwargs)
 
-    """model viewset for review
-    list : list all review
-    retrieve : get a review by id
-    create : create a review
-    update : update a review
-    destroy : delete a review
+    """showroom viewset
+    list : list all showroom
+    retrieve : get a showroom by id
+    create : create a showroom
+    update : update a showroom
+    destroy : delete a showroom
 
     Returns:
-        Response: json response of review
+        _type_: _description_
     """
 
     
